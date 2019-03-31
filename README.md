@@ -9,3 +9,16 @@ Download the ICDAR-SROIE dataset:
 Ensure the dataset or the soft link is stored in `src` file and run [`boxing.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/boxing.py)
 
 <div align=center><img src="./img/boxing.PNG" width="450" height="436"/></div>
+
+
+## Prepare Data for training
+### Train/Test Data Split 
+Open [`split_train_test.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/split_train_test.py) and set **train_test_ratio**. In this case it is set to 4.
+
+In `.\ICDAR_Dataset` two files `train1` and `test1` are created. Images and labels are split into these two files in sequence.
+
+
+### Pack Data
+Run [`create_data_lists.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/create_data_lists.py) in order to pack all the image paths and labels into json files for futher operations. These json files are named `TEST_images.json` `TEST_objects.json` `TRAIN_images.json` `TRAIN_objects.json`.
+
+<div align=center><img src="./img/json_list.PNG" width="300" height="110"/></div>

@@ -10,9 +10,9 @@ import os
 import shutil
 import random
 
-image_path = "ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/"
-train_path = "ICDAR_Dataset/0325updated.task1train(626p)/train1/"
-test_path = "ICDAR_Dataset/0325updated.task1train(626p)/test1/"
+image_path = "../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/"
+train_path = "../ICDAR_Dataset/0325updated.task1train(626p)/train1/"
+test_path = "../ICDAR_Dataset/0325updated.task1train(626p)/test1/"
 train_test_ratio = 4
 
 

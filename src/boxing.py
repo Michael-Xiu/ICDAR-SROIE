@@ -11,7 +11,7 @@ import os
 import shutil
 
 
-image_path = "ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/"
+image_path = "../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/"
 box_path = image_path + 'box/'
 
 # gain the image list

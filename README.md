@@ -15,6 +15,16 @@ Ensure the dataset or the soft link is stored in `src` file and run [`boxing.py`
 <div align=center><img src="./img/boxing.PNG" width="450" height="436"/></div>
 
 
+## Code Hierarchy
+- `split_train_test.py` : Split raw images and '.txt' into a training set and a testing set.
+- `create_data_lists.py` -> `utils.crete_data_lists()` :  Create '.json' files to store ID of images, objects {boxes & labels & texts} and labels (num of classes) . 
+- `train.py` : Define the main procedure of training.
+  - `train.py` -> `datasets.ICDARDataset()` : Read '.json' files to get datasets, apply data preprocessing with `utils.transform()` and store in a Dataset class to be used in a PyTorch DataLoader to create batches.
+  - `train.py` -> `model.py` : Define SSD model and its MultiBox loss function.
+- `detect.py` : Define the main procedure of testing, including data preprocessing and annotation.
+  - `detect.py` -> `model.py` : Define SSD model and `detect_objects()` function with non-maximum suppression.
+
+
 ## Prepare Data for training
 
 ### Train/Test Data Split 
@@ -24,8 +34,14 @@ In `.\ICDAR_Dataset` two files `train1` and `test1` are created. Images and labe
 
 
 ### Pack Data
-Run [`create_data_lists.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/create_data_lists.py) in order to pack all the image paths and labels into json files for futher operations. These json files are named `TEST_images.json` `TEST_objects.json` `TRAIN_images.json` `TRAIN_objects.json`.
+Run [`create_data_lists.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/create_data_lists.py) in order to pack all the image paths, objects and labels into json files for futher operations. These json files are named `TEST_images.json` `TEST_objects.json` `label_map.json` `TRAIN_images.json` `TRAIN_objects.json`.
 
-<div align=center><img src="./img/json_list.PNG" width="300" height="110"/></div>
+<div align=center><img src="./img/json_list.PNG" width="230" height="110"/></div>
 
-## ..be continued
+### Train
+Run [`train.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/train.py) to train an end-to-end text detection model. In this case we use Adam as optimizer.
+
+### Detect
+Run [`detect.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/detect.py) to detect an test image with pretrained model with minimum validation loss. The samples are shown as below:
+
+<div align=center><img src="./img/detection.PNG" width="450" height="363"/></div>

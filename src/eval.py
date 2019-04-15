@@ -1,5 +1,9 @@
+import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # to specify the GPU_id in the remote server
+
 from utils import *
-from datasets import PascalVOCDataset
+from datasets import ICDARDataset
 from tqdm import tqdm
 from pprint import PrettyPrinter
 
@@ -7,12 +11,12 @@ from pprint import PrettyPrinter
 pp = PrettyPrinter()
 
 # Parameters
-data_folder = './'
-keep_difficult = True  # difficult ground truth objects must always be considered in mAP calculation, because these objects DO exist!
+data_folder = '../ICDAR_Dataset/0325updated.task1train(626p)/'
+keep_difficult = False  # difficult ground truth objects must always be considered in mAP calculation, because these objects DO exist!
 batch_size = 64
 workers = 4
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-checkpoint = './BEST_checkpoint_ssd300.pth.tar'
+checkpoint = 'BEST_checkpoint_ssd300.pth.tar'
 
 # Load model checkpoint that is to be evaluated
 checkpoint = torch.load(checkpoint)
@@ -23,7 +27,7 @@ model = model.to(device)
 model.eval()
 
 # Load test data
-test_dataset = PascalVOCDataset(data_folder,
+test_dataset = ICDARDataset(data_folder,
                                 split='test')
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
                                           collate_fn=test_dataset.collate_fn, num_workers=workers, pin_memory=True)
@@ -74,12 +78,12 @@ def evaluate(test_loader, model):
 
 
         # Calculate mAP
-        #APs, mAP = calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels)
+        APs, mAP = calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels)
 
     # Print AP for each class
-  #  pp.pprint(APs)
+    pp.pprint(APs)
 
-   # print('\nMean Average Precision (mAP): %.3f' % mAP)
+    print('\nMean Average Precision (mAP): %.3f' % mAP)
 
 
 if __name__ == '__main__':

@@ -1,13 +1,13 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"  # to specify the GPU_id in the remote server
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # to specify the GPU_id in the remote server
 
 import time
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 from model import SSD300, MultiBoxLoss
-from datasets import PascalVOCDataset
+from datasets import ICDARDataset
 from utils import *
 
 
@@ -22,7 +22,7 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda")
 
 # Learning parameters
-checkpoint = 'BEST_checkpoint_ssd300.pth.tar' #"checkpoint_ssd300.pth.tar"  # path to model checkpoint, None if none
+checkpoint = None #'BEST_checkpoint_ssd300.pth.tar' #"checkpoint_ssd300.pth.tar"  # path to model checkpoint, None if none
 batch_size = 8  # batch size
 start_epoch = 0  # start at this epoch
 epochs = 300  # number of epochs to run without early-stopping
@@ -30,7 +30,7 @@ epochs_since_improvement = 0  # number of epochs since there was an improvement 
 best_loss = 100.  # assume a high loss at first
 workers = 4  # number of workers for loading data in the DataLoader
 print_freq = 10  # print training or validation status every __ batches
-lr = 1e-4  # learning rate
+lr = 1e-3  # learning rate
 momentum = 0.9  # momentum
 weight_decay = 5e-4  # weight decay
 grad_clip = None  # clip if gradients are exploding, which may happen at larger batch sizes (sometimes at 32) - you will recognize it by a sorting error in the MuliBox loss calculation
@@ -74,9 +74,9 @@ def main():
     criterion = MultiBoxLoss(priors_cxcy=model.priors_cxcy).to(device)
 
     # Custom dataloaders
-    train_dataset = PascalVOCDataset(data_folder,
+    train_dataset = ICDARDataset(data_folder,
                                      split='train')
-    val_dataset = PascalVOCDataset(data_folder,
+    val_dataset = ICDARDataset(data_folder,
                                    split='test')
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                                collate_fn=train_dataset.collate_fn, num_workers=workers,

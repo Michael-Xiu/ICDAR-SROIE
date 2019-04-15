@@ -6,7 +6,7 @@ from PIL import Image
 from utils import transform
 
 
-class PascalVOCDataset(Dataset):
+class ICDARDataset(Dataset):
     """
     A PyTorch Dataset class to be used in a PyTorch DataLoader to create batches.
     """

@@ -9,6 +9,9 @@ Environment: python3.5.6 pytorch1.0.1 cuda9.0
 import cv2
 import os
 import shutil
+import numpy as np
+from matplotlib import pyplot as plt
+
 
 image_path = "../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/"
 box_path = image_path + 'box/'
@@ -45,6 +48,9 @@ def list():
 def draw():
     f = open(box_path + 'jpglist.txt')
 
+    rect_scale_pack=[]
+    rect_ratio_pack=[]
+
     # read each image and its label
     line = f.readline()
     line_num =0
@@ -67,20 +73,44 @@ def draw():
             y3 = int(coor[5].strip('\''))
             text = coor[8].strip('\n').strip('\'')
 
-            cv2.rectangle(img, (x1, y1), (x3, y3), (255, 0, 0), 1)
-            cv2.putText(img, text, (x1, y1 - 1),
-                        cv2.FONT_HERSHEY_TRIPLEX, 0.35, (0, 0, 255), 1)
+            rect_size = (x3-x1)*(y3-y1)
+            rect_scale = np.sqrt(rect_size / img_size)
+            rect_scale_pack.append(rect_scale)
+            #print(rect_scale_pack)
+
+            rect_ratio = (x3-x1)/(y3-y1)
+            rect_ratio_pack.append(rect_ratio)
+
+
+            #cv2.rectangle(img, (x1, y1), (x3, y3), (255, 0, 0), 1)
+            #cv2.putText(img, text, (x1, y1 - 1),
+                        #cv2.FONT_HERSHEY_TRIPLEX, 0.35, (0, 0, 255), 1)
             line_txt = f_txt.readline()
-        cv2.imwrite(box_path + name, img)
+        #cv2.imwrite(box_path + name, img)
         line = f.readline()
         # img = cv2.imshow('image', img)
         # cv2.waitKey(0)
+    return rect_scale_pack,rect_ratio_pack
 
 if __name__ == '__main__':
     if os.path.exists(box_path):
         shutil.rmtree(box_path)
     os.mkdir(box_path)
     list()  # list all the image in image_path into a txt
-    draw()  # draw the box based on the list
+    rect_scale_pack, rect_ratio_pack = draw()  # draw the box based on the list
+    #np.histogram(rect_scale_pack)  # have a statistic of the scale distribution
+    print(rect_scale_pack)
+    plt.figure(1)
+    plt.hist(rect_scale_pack, bins=100)
+    plt.xlabel('scale')
+    plt.ylabel('num of image')
+    plt.show()
+
+    print(rect_ratio_pack)
+    plt.figure(1)
+    plt.hist(rect_ratio_pack, bins=20,range=(0,5))
+    plt.xlabel('ratio')
+    plt.ylabel('num of image')
+    plt.show()
 
 

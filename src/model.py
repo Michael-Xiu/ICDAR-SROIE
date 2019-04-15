@@ -1,6 +1,7 @@
 from torch import nn
 from utils import *
 import torch.nn.functional as F
+from torch.autograd import Variable
 from math import sqrt
 from itertools import product as product
 import torchvision
@@ -217,12 +218,19 @@ class PredictionConvolutions(nn.Module):
         self.n_classes = n_classes
 
         # Number of prior-boxes we are considering per position in each feature map
-        n_boxes = {'conv4_3': 4,
-                   'conv7': 6,
-                   'conv8_2': 6,
-                   'conv9_2': 6,
-                   'conv10_2': 4,
-                   'conv11_2': 4}
+        # n_boxes = {'conv4_3': 4,
+        #            'conv7': 6,
+        #            'conv8_2': 6,
+        #            'conv9_2': 6,
+        #            'conv10_2': 4,
+        #            'conv11_2': 4}
+        n_boxes = {'conv4_3': 5,
+                   'conv7': 5,
+                   'conv8_2': 5,
+                   'conv9_2': 5,
+                   'conv10_2': 5,
+                   'conv11_2': 5}
+
         # 4 prior-boxes implies we use 4 different aspect ratios, etc.
 
         # Localization prediction convolutions (predict offsets w.r.t prior-boxes)
@@ -392,19 +400,33 @@ class SSD300(nn.Module):
                      'conv10_2': 3,
                      'conv11_2': 1}
 
-        obj_scales = {'conv4_3': 0.1,
-                      'conv7': 0.2,
-                      'conv8_2': 0.375,
-                      'conv9_2': 0.55,
-                      'conv10_2': 0.725,
-                      'conv11_2': 0.9}
+        # obj_scales = {'conv4_3': 0.1,
+        #               'conv7': 0.2,
+        #               'conv8_2': 0.375,
+        #               'conv9_2': 0.55,
+        #               'conv10_2': 0.725,
+        #               'conv11_2': 0.9}
 
-        aspect_ratios = {'conv4_3': [1., 2., 0.5],
-                         'conv7': [1., 2., 3., 0.5, .333],
-                         'conv8_2': [1., 2., 3., 0.5, .333],
-                         'conv9_2': [1., 2., 3., 0.5, .333],
-                         'conv10_2': [1., 2., 0.5],
-                         'conv11_2': [1., 2., 0.5]}
+        obj_scales = {'conv4_3': 0.03,
+                      'conv7': 0.05,
+                      'conv8_2': 0.08,
+                      'conv9_2': 0.12,
+                      'conv10_2': 0.15,
+                      'conv11_2': 0.2}
+
+        # aspect_ratios = {'conv4_3': [1., 2., 0.5],
+        #                  'conv7': [1., 2., 3., 0.5, .333],
+        #                  'conv8_2': [1., 2., 3., 0.5, .333],
+        #                  'conv9_2': [1., 2., 3., 0.5, .333],
+        #                  'conv10_2': [1., 2., 0.5],
+        #                  'conv11_2': [1., 2., 0.5]}
+
+        aspect_ratios = {'conv4_3': [12., 8., 4., 2., 0.75],
+                         'conv7': [12., 8., 4., 2., 0.75],
+                         'conv8_2': [12., 8., 4., 2., 0.75],
+                         'conv9_2': [12., 8., 4., 2., 0.75],
+                         'conv10_2': [12., 8., 4., 2., 0.75],
+                         'conv11_2': [12., 8., 4., 2., 0.75],}
 
         fmaps = list(fmap_dims.keys())
 
@@ -559,6 +581,7 @@ class MultiBoxLoss(nn.Module):
 
         self.smooth_l1 = nn.L1Loss()
         self.cross_entropy = nn.CrossEntropyLoss(reduce=False)
+        # self.focal_loss = FocalLoss(gamma=2)
 
     def forward(self, predicted_locs, predicted_scores, boxes, labels):
         """
@@ -638,6 +661,7 @@ class MultiBoxLoss(nn.Module):
 
         # First, find the loss for all priors
         conf_loss_all = self.cross_entropy(predicted_scores.view(-1, n_classes), true_classes.view(-1))  # (N * 8732)
+        # conf_loss_all = self.focal_loss(predicted_scores.view(-1, n_classes), true_classes.view(-1))  # (N * 8732)
         conf_loss_all = conf_loss_all.view(batch_size, n_priors)  # (N, 8732)
 
         # We already know which priors are positive
@@ -658,3 +682,35 @@ class MultiBoxLoss(nn.Module):
         # TOTAL LOSS
 
         return conf_loss + self.alpha * loc_loss
+
+
+class FocalLoss(nn.Module):
+    def __init__(self, gamma=0, alpha=None, size_average=True):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+        if isinstance(alpha,(float,int,long)): self.alpha = torch.Tensor([alpha,1-alpha])
+        if isinstance(alpha,list): self.alpha = torch.Tensor(alpha)
+        self.size_average = size_average
+
+    def forward(self, input, target):
+        if input.dim()>2:
+            input = input.view(input.size(0),input.size(1),-1)  # N,C,H,W => N,C,H*W
+            input = input.transpose(1,2)    # N,C,H*W => N,H*W,C
+            input = input.contiguous().view(-1,input.size(2))   # N,H*W,C => N*H*W,C
+        target = target.view(-1,1)
+
+        logpt = F.log_softmax(input)
+        logpt = logpt.gather(1,target)
+        logpt = logpt.view(-1)
+        pt = Variable(logpt.data.exp())
+
+        if self.alpha is not None:
+            if self.alpha.type()!=input.data.type():
+                self.alpha = self.alpha.type_as(input.data)
+            at = self.alpha.gather(0,target.data.view(-1))
+            logpt = logpt * Variable(at)
+
+        loss = -1 * (1-pt)**self.gamma * logpt
+        if self.size_average: return loss.mean()
+        else: return loss.sum()

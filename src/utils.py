@@ -175,8 +175,10 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels):
 
         # Keep track of which true objects with this class have already been 'detected'
         # So far, none
-        true_class_boxes_detected = torch.zeros((true_class_difficulties.size(0)), dtype=torch.uint8).to(
-            device)  # (n_class_objects)
+     #   true_class_boxes_detected = torch.zeros((true_class_difficulties.size(0)), dtype=torch.uint8).to(
+     #       device)  # (n_class_objects)
+        true_class_boxes_detected = torch.zeros((true_images.size(0)), dtype=torch.uint8).to(
+        device)  # (n_class_objects)
 
         # Extract only detections with this class
         det_class_images = det_images[det_labels == c]  # (n_class_detections)
@@ -234,7 +236,8 @@ def calculate_mAP(det_boxes, det_labels, det_scores, true_boxes, true_labels):
         cumul_false_positives = torch.cumsum(false_positives, dim=0)  # (n_class_detections)
         cumul_precision = cumul_true_positives / (
                 cumul_true_positives + cumul_false_positives + 1e-10)  # (n_class_detections)
-        cumul_recall = cumul_true_positives / n_easy_class_objects  # (n_class_detections)
+        #cumul_recall = cumul_true_positives / n_easy_class_objects  # (n_class_detections)
+        cumul_recall = cumul_true_positives / len(det_boxes)
 
         # Find the mean of the maximum of the precisions corresponding to recalls above the threshold 't'
         recall_thresholds = torch.arange(start=0, end=1.1, step=.1).tolist()  # (11)

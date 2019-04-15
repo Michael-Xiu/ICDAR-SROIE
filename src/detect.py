@@ -1,6 +1,6 @@
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"  # to specify the GPU_id in the remote server
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # to specify the GPU_id in the remote server
 
 from torchvision import transforms
 from utils import *
@@ -110,20 +110,20 @@ if __name__ == '__main__':
     img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/test1/X51006556591.jpg'
     original_image = Image.open(img_path, mode='r')
     original_image = original_image.convert('RGB')
-    out_image=detect(original_image, min_score=0.2, max_overlap=0.5, top_k=200)#.show()
+    out_image=detect(original_image, min_score=0.2, max_overlap=0.3, top_k=200)#.show()
     img_save_path = './test_X51006556591.jpg'
     out_image.save(img_save_path)
 
     img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/test1/X51007231361.jpg'
     original_image = Image.open(img_path, mode='r')
     original_image = original_image.convert('RGB')
-    out_image=detect(original_image, min_score=0.2, max_overlap=0.5, top_k=200)#.show()
+    out_image=detect(original_image, min_score=0.2, max_overlap=0.3, top_k=200)#.show()
     img_save_path = './test_X51007231361.jpg'
     out_image.save(img_save_path)
 
     img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/test1/X51008145504.jpg'
     original_image = Image.open(img_path, mode='r')
     original_image = original_image.convert('RGB')
-    out_image=detect(original_image, min_score=0.2, max_overlap=0.5, top_k=200)#.show()
+    out_image=detect(original_image, min_score=0.2, max_overlap=0.3, top_k=200)#.show()
     img_save_path = './test_X51008145504.jpg'
     out_image.save(img_save_path)

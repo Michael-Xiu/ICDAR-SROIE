@@ -17,7 +17,7 @@ Ensure the dataset or the soft link is stored in `src` file and run [`boxing.py`
 
 ## Code Hierarchy
 - `split_train_test.py` : Split raw images and '.txt' into a training set and a testing set.
-- `create_data_lists.py` -> `utils.crete_data_lists()` :  Create '.json' files to store ID of images, objects {boxes & labels & texts} and labels (num of classes) . 
+- `create_data_lists.py` -> `utils.crete_data_lists()` -> `utils.parse_annotation()` :  Create '.json' files to store ID of images, objects {boxes & labels & texts} and labels (num of classes) . 
 - `train.py` : Define the main procedure of training.
   - `train.py` -> `datasets.ICDARDataset()` : Read '.json' files to get datasets, apply data preprocessing with `utils.transform()` and store in a Dataset class to be used in a PyTorch DataLoader to create batches.
   - `train.py` -> `model.py` : Define SSD model and its MultiBox loss function.

@@ -4,6 +4,7 @@ import torch
 import random
 import xml.etree.ElementTree as ET
 import torchvision.transforms.functional as FT
+import numpy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -18,16 +19,27 @@ def parse_annotation(annotation_path):
     labels = list()
 
     f_txt = open(annotation_path)
+
+    # In ICDAR case, the first line is our ROI coordinate (xmin, ymin)
     line_txt = f_txt.readline()
+    coor = line_txt.split(',')
+    ROI_x = int(coor[0].strip('\''))
+    ROI_y = int(coor[1].strip('\''))
+
+    line_txt = f_txt.readline()
+
     while line_txt:
         coor = line_txt.split(',')
-        xmin = int(coor[0].strip('\''))
-        ymin = int(coor[1].strip('\''))
-        xmax = int(coor[4].strip('\''))
-        ymax = int(coor[5].strip('\''))
-        # text = coor[8].strip('\n').strip('\'')
-        boxes.append([xmin, ymin, xmax, ymax])
-        labels.append(label_map['text'])
+        #print(coor[0])
+        #print(annotation_path)
+        if coor[0] !='"\r\n':
+            xmin = int(coor[0].strip('\'')) - ROI_x
+            ymin = int(coor[1].strip('\'')) - ROI_y
+            xmax = int(coor[4].strip('\'')) - ROI_x
+            ymax = int(coor[5].strip('\'')) - ROI_y
+            # text = coor[8].strip('\n').strip('\'')
+            boxes.append([xmin, ymin, xmax, ymax])
+            labels.append(label_map['text'])
 
         line_txt = f_txt.readline()
 
@@ -700,3 +712,82 @@ def clip_gradient(optimizer, grad_clip):
         for param in group['params']:
             if param.grad is not None:
                 param.grad.data.clamp_(-grad_clip, grad_clip)
+
+
+def calc_f1(pred, truth, iou_thresh=0.5):
+    """
+    summary:
+        calculates the F1, AP, AR of a single image
+
+    arguments:
+        pred    prediction boxes as an N x 4 tensor, each row is (x0, y0, x1, y1) of a box.
+                prediction boxes are assumed to be in descending confidence, i.e. the first box has
+                the highest confidence
+        truth   truth boxes as an M x 4 tensor, each row is (x0, y0, x1, y1) of a box. the order of
+                truth boxes does not matter
+        iou_thresh  optional. the IOU required for a prediction box to be considered as 'correct'
+    return:
+
+        f1-score, average-precision, average-recall
+
+    note:
+        this does NOT work on CUDA, put things on CPU
+    """
+    ious = torch.zeros(len(pred), len(truth))
+    for i, pred_box in enumerate(pred):
+        ious[i] = calc_ious(truth, pred_box)
+    ious_max, _ = torch.max(ious, dim=1)
+
+    hit = (ious_max > iou_thresh).numpy()
+    accum = numpy.zeros_like(hit, dtype=float)
+    for i in range(1, len(hit)):
+        accum[i] = hit[0:i].sum()
+
+    precision = accum / numpy.arange(1, len(hit) + 1)
+    for i in range(len(precision)):
+        precision[i] = precision[i:].max()
+
+    recall = accum / len(truth)
+
+    # Average precision
+    ap = numpy.interp(numpy.linspace(min(recall), max(recall), 101), recall, precision).mean()+0.001
+    # Average recall
+    ar = numpy.interp(numpy.linspace(min(precision), max(precision), 101), precision, recall).mean()+0.001
+    # Average F1
+    f1 = 2 * ap * ar / (ap + ar)
+
+    return f1, ap, ar
+
+
+def calc_ious(boxes, box0):
+    m = torch.max(boxes, box0).t()
+    n = torch.min(boxes, box0).t()
+    ious = ((n[2] - m[0]).clamp(0) * (n[3] - m[1]).clamp(0)) / (
+        (m[2] - n[0]).clamp(0) * (m[3] - n[1]).clamp(0)
+    )
+
+    return ious
+
+
+# limit the box in the image area
+def box_limit(det_boxes, img):
+    height, width = img.shape
+    for i in range(len(det_boxes)):
+        if det_boxes[i][0] < 0:
+            det_boxes[i][0] = 0
+        if det_boxes[i][0] > width:
+            det_boxes[i][0] = width
+        if det_boxes[i][1] < 0:
+            det_boxes[i][1] = 0
+        if det_boxes[i][1] > height:
+            det_boxes[i][1] = height
+        if det_boxes[i][2] < 0:
+            det_boxes[i][2] = 0
+        if det_boxes[i][2] > width:
+            det_boxes[i][2] = width
+        if det_boxes[i][3] < 0:
+            det_boxes[i][3] = 0
+        if det_boxes[i][3] > height:
+            det_boxes[i][3] = height
+    return det_boxes
+

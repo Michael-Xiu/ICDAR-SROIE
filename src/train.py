@@ -22,8 +22,8 @@ n_classes = len(label_map)  # number of different types of objects
 device = torch.device("cuda")
 
 # Learning parameters
-checkpoint = None #'BEST_checkpoint_ssd300.pth.tar' #"checkpoint_ssd300.pth.tar"  # path to model checkpoint, None if none
-batch_size = 8  # batch size
+checkpoint = "checkpoint_ssd300.pth.tar" #'BEST_checkpoint_ssd300.pth.tar' #"checkpoint_ssd300.pth.tar"  # path to model checkpoint, None if none
+batch_size = 12  # batch size
 start_epoch = 0  # start at this epoch
 epochs = 300  # number of epochs to run without early-stopping
 epochs_since_improvement = 0  # number of epochs since there was an improvement in the validation metric
@@ -56,15 +56,15 @@ def main():
                     biases.append(param)
                 else:
                     not_biases.append(param)
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.99))
-        #torch.optim.SGD(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
-                                    #lr=lr, momentum=momentum, weight_decay=weight_decay)
+        # optimizer = torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.99))
+        optimizer = torch.optim.SGD(params=[{'params': biases, 'lr': 2 * lr}, {'params': not_biases}],
+                                    lr=lr, momentum=momentum, weight_decay=weight_decay)
 
     else:
         checkpoint = torch.load(checkpoint)
         start_epoch = checkpoint['epoch'] + 1
         epochs_since_improvement = checkpoint['epochs_since_improvement']
-        best_loss = checkpoint['best_loss']
+        best_loss = checkpoint['best_loss'] + 1
         print('\nLoaded checkpoint from epoch %d. Best loss so far is %.3f.\n' % (start_epoch, best_loss))
         model = checkpoint['model']
         optimizer = checkpoint['optimizer']
@@ -84,6 +84,8 @@ def main():
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True,
                                              collate_fn=val_dataset.collate_fn, num_workers=workers,
                                              pin_memory=True)
+
+
     # Epochs
     for epoch in range(start_epoch, epochs):
         # Paper describes decaying the learning rate at the 80000th, 100000th, 120000th 'iteration', i.e. model update or batch
@@ -99,7 +101,7 @@ def main():
         # and have adjust_learning_rate(optimizer, 0.1) BEFORE this 'for' loop
 
         # One epoch's training
-        train(train_loader=train_loader,
+        train_loss = train(train_loader=train_loader,
               model=model,
               criterion=criterion,
               optimizer=optimizer,
@@ -109,6 +111,11 @@ def main():
         val_loss = validate(val_loader=val_loader,
                             model=model,
                             criterion=criterion)
+
+        # Did validation loss improve?
+        # is_best = train_loss < best_loss
+        # best_loss = min(train_loss, best_loss)
+
 
         # Did validation loss improve?
         is_best = val_loss < best_loss
@@ -123,6 +130,9 @@ def main():
 
         # Save checkpoint
         save_checkpoint(epoch, epochs_since_improvement, model, optimizer, val_loss, best_loss, is_best)
+
+        with open('log.txt', 'a+') as f:
+            f.write('epoch:'+ str(epoch) + '  train loss:' + str(train_loss)+ '  val loss:' + str(val_loss)+'\n')
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -182,8 +192,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, i, len(train_loader),
                                                                   batch_time=batch_time,
                                                                   data_time=data_time, loss=losses))
+
     del predicted_locs, predicted_scores, images, boxes, labels  # free some memory since their histories may be stored
 
+    return losses.avg
 
 def validate(val_loader, model, criterion):
     """

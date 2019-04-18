@@ -13,7 +13,7 @@ import random
 image_path = "../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/"
 train_path = "../ICDAR_Dataset/0325updated.task1train(626p)/train1/"
 test_path = "../ICDAR_Dataset/0325updated.task1train(626p)/test1/"
-train_test_ratio = 4
+train_test_ratio = 24
 
 
 def MoveFile(dir, file_train, file_test, wildcard, recursion):

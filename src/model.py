@@ -5,6 +5,9 @@ from torch.autograd import Variable
 from math import sqrt
 from itertools import product as product
 import torchvision
+import torch
+from PIL import Image, ImageDraw, ImageFont
+import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -218,18 +221,18 @@ class PredictionConvolutions(nn.Module):
         self.n_classes = n_classes
 
         # Number of prior-boxes we are considering per position in each feature map
-        # n_boxes = {'conv4_3': 4,
-        #            'conv7': 6,
-        #            'conv8_2': 6,
-        #            'conv9_2': 6,
-        #            'conv10_2': 4,
-        #            'conv11_2': 4}
-        n_boxes = {'conv4_3': 5,
-                   'conv7': 5,
-                   'conv8_2': 5,
-                   'conv9_2': 5,
-                   'conv10_2': 5,
-                   'conv11_2': 5}
+        n_boxes = {'conv4_3': 4,
+                   'conv7': 6,
+                   'conv8_2': 6,
+                   'conv9_2': 6,
+                   'conv10_2': 4,
+                   'conv11_2': 4}
+        # n_boxes = {'conv4_3': 3,
+        #            'conv7': 5,
+        #            'conv8_2': 5,
+        #            'conv9_2': 5,
+        #            'conv10_2': 5,
+        #            'conv11_2': 5}
 
         # 4 prior-boxes implies we use 4 different aspect ratios, etc.
 
@@ -400,33 +403,34 @@ class SSD300(nn.Module):
                      'conv10_2': 3,
                      'conv11_2': 1}
 
-        # obj_scales = {'conv4_3': 0.1,
-        #               'conv7': 0.2,
-        #               'conv8_2': 0.375,
-        #               'conv9_2': 0.55,
-        #               'conv10_2': 0.725,
-        #               'conv11_2': 0.9}
+        obj_scales = {'conv4_3': 0.1,
+                      'conv7': 0.2,
+                      'conv8_2': 0.375,
+                      'conv9_2': 0.55,
+                      'conv10_2': 0.725,
+                      'conv11_2': 0.9}
+        aspect_ratios = {'conv4_3': [1., 2., 0.5],
+                         'conv7': [1., 2., 3., 0.5, .333],
+                         'conv8_2': [1., 2., 3., 0.5, .333],
+                         'conv9_2': [1., 2., 3., 0.5, .333],
+                         'conv10_2': [1., 2., 0.5],
+                         'conv11_2': [1., 2., 0.5]}
 
-        obj_scales = {'conv4_3': 0.03,
-                      'conv7': 0.05,
-                      'conv8_2': 0.08,
-                      'conv9_2': 0.12,
-                      'conv10_2': 0.15,
-                      'conv11_2': 0.2}
-
-        # aspect_ratios = {'conv4_3': [1., 2., 0.5],
-        #                  'conv7': [1., 2., 3., 0.5, .333],
-        #                  'conv8_2': [1., 2., 3., 0.5, .333],
-        #                  'conv9_2': [1., 2., 3., 0.5, .333],
-        #                  'conv10_2': [1., 2., 0.5],
-        #                  'conv11_2': [1., 2., 0.5]}
-
-        aspect_ratios = {'conv4_3': [12., 8., 4., 2., 0.75],
-                         'conv7': [12., 8., 4., 2., 0.75],
-                         'conv8_2': [12., 8., 4., 2., 0.75],
-                         'conv9_2': [12., 8., 4., 2., 0.75],
-                         'conv10_2': [12., 8., 4., 2., 0.75],
-                         'conv11_2': [12., 8., 4., 2., 0.75],}
+        # obj_scales = {'conv4_3': 0.03,
+        #               'conv7': 0.05,
+        #               'conv8_2': 0.08,
+        #               'conv9_2': 0.12,
+        #               'conv10_2': 0.15,
+        #               'conv11_2': 0.2}
+        #
+        #
+        #
+        # aspect_ratios = {'conv4_3': [4., 2., 0.75],
+        #                  'conv7': [12., 8., 4., 2., 0.75],
+        #                  'conv8_2': [12., 8., 4., 2., 0.75],
+        #                  'conv9_2': [12., 8., 4., 2., 0.75],
+        #                  'conv10_2': [12., 8., 4., 2., 0.75],
+        #                  'conv11_2': [12., 8., 4., 2., 0.75],}
 
         fmaps = list(fmap_dims.keys())
 
@@ -456,7 +460,7 @@ class SSD300(nn.Module):
 
         return prior_boxes
 
-    def detect_objects(self, predicted_locs, predicted_scores, min_score, max_overlap, top_k):
+    def detect_objects(self, predicted_locs, predicted_scores, min_score, max_overlap, top_k, original_image, max_OCR_overlap=1.0, max_OCR_ratio=1.0):
         """
         Decipher the 8732 locations and class scores (output of ths SSD300) to detect objects.
 
@@ -467,6 +471,9 @@ class SSD300(nn.Module):
         :param min_score: minimum threshold for a box to be considered a match for a certain class
         :param max_overlap: maximum overlap two boxes can have so that the one with the lower score is not suppressed via NMS
         :param top_k: if there are a lot of resulting detection across all classes, keep only the top 'k'
+        :param original_image: the image source
+        :param max_OCR_overlap: maximum overlap two boxes can have considering the sum of pixels in the boxes
+        :param max_OCR_pixel: maximum pixel value average that can be considered as having content
         :return: detections (boxes, labels, and scores), lists of length batch_size
         """
         batch_size = predicted_locs.size(0)
@@ -510,7 +517,9 @@ class SSD300(nn.Module):
                 # Find the overlap between predicted boxes
                 overlap = find_jaccard_overlap(class_decoded_locs, class_decoded_locs)  # (n_qualified, n_min_score)
 
-                # Non-Maximum Suppression (NMS)
+
+
+                # STEP 1:  Non-Maximum Suppression (NMS) 1st: suppress by class scores and IOU
 
                 # A torch.uint8 (byte) tensor to keep track of which predicted boxes to suppress
                 # 1 implies suppress, 0 implies don't suppress
@@ -547,6 +556,7 @@ class SSD300(nn.Module):
             image_scores = torch.cat(image_scores, dim=0)  # (n_objects)
             n_objects = image_scores.size(0)
 
+
             # Keep only the top k objects
             if n_objects > top_k:
                 image_scores, sort_ind = image_scores.sort(dim=0, descending=True)
@@ -554,10 +564,81 @@ class SSD300(nn.Module):
                 image_boxes = image_boxes[sort_ind][:top_k]  # (top_k, 4)
                 image_labels = image_labels[sort_ind][:top_k]  # (top_k)
 
+
+
+            # STEP 2:  NMS 2nd: suppress the shorter boxes by calculating the sum of pixels
+
+            # Move detections to the CPU
+            image_boxes = image_boxes[:].to('cpu')
+            # Transform to original image dimensions
+            original_dims = torch.FloatTensor(
+                [original_image.width, original_image.height, original_image.width,
+                 original_image.height]).unsqueeze(0)
+            image_boxes = image_boxes * original_dims
+
+            # read image array
+            img = original_image.convert('L')   # 8-bit image
+            img = np.array(img)
+
+
+            # calculate boxes pixels sum as score
+            det_boxes = image_boxes.tolist()
+            all_score = torch.zeros(len(det_boxes))
+            all_score_ave = torch.zeros(len(det_boxes))
+
+            for m in range(len(det_boxes)):
+                det_boxes = box_limit(det_boxes, img)
+                x1 = int(round(det_boxes[m][0]))
+                y1 = int(round(det_boxes[m][1]))
+                x3 = int(round(det_boxes[m][2]))
+                y3 = int(round(det_boxes[m][3]))
+                crop = img[y1:y3, x1:x3]
+                score = np.sum(np.sum(crop))
+                all_score[m] = torch.tensor(score, dtype=torch.float)
+                score_ave = score / ((x3-x1)*(y3-y1)+0.0001)
+                all_score_ave[m] = torch.tensor(score_ave, dtype=torch.float)
+
+            det_boxes = torch.tensor(det_boxes, dtype=torch.float)
+
+            # Sort predicted boxes and scores by scores
+            all_score, sort_ind = all_score.sort(dim=0, descending=False)
+            det_boxes = det_boxes[sort_ind]
+            all_score_ave = all_score_ave[sort_ind]
+            image_labels = image_labels[sort_ind]
+
+            # Find the overlap between predicted boxes
+            overlap = find_jaccard_overlap(det_boxes, det_boxes)
+
+            suppress = torch.zeros((det_boxes.size(0)), dtype=torch.uint8)  # .to(device)
+            for box in range(det_boxes.size(0)):
+                suppress = torch.max(suppress, overlap[box] > max_OCR_overlap)
+                suppress[box] = 0
+
+            det_boxes = det_boxes[1 - suppress]
+            all_score = all_score[1 - suppress]
+            all_score_ave = all_score_ave[1 - suppress]
+            image_labels = image_labels[1 - suppress]
+
+
+            # STEP 3:  Suppress boxes without content
+            suppress = torch.zeros((det_boxes.size(0)), dtype=torch.uint8)  # .to(device)
+            all_score_ave, sort_ind = all_score_ave.sort(dim=0, descending=False)
+            det_boxes = det_boxes[sort_ind]
+            all_score = all_score[sort_ind]
+            image_labels = image_labels[sort_ind]
+
+            suppress[int(round(det_boxes.size(0)*max_OCR_ratio)):]=1
+
+            det_boxes = det_boxes[1 - suppress]
+            all_score = all_score[1 - suppress]
+            all_score_ave = all_score_ave[1 - suppress]
+            image_labels = image_labels[1 - suppress]
+
+
             # Append to lists that store predicted boxes and scores for all images
-            all_images_boxes.append(image_boxes)
+            all_images_boxes.append(det_boxes)
             all_images_labels.append(image_labels)
-            all_images_scores.append(image_scores)
+            all_images_scores.append(all_score)
 
         return all_images_boxes, all_images_labels, all_images_scores  # lists of length batch_size
 

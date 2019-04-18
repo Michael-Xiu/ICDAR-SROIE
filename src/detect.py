@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load model checkpoint
-checkpoint = 'BEST_checkpoint_ssd300.pth.tar'
+checkpoint ='best4.17.tar' #'BEST_checkpoint_ssd300.pth.tar' #    #' #'best.tar' # #
 checkpoint = torch.load(checkpoint)
 start_epoch = checkpoint['epoch'] + 1
 best_loss = checkpoint['best_loss']
@@ -25,7 +25,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
-def detect(original_image, min_score, max_overlap, top_k, suppress=None):
+def detect(original_image, min_score, max_overlap, top_k, max_OCR_overlap=1.0, max_OCR_ratio=1.0, suppress=None):
     """
     Detect objects in an image with a trained SSD300, and visualize the results.
 
@@ -48,20 +48,17 @@ def detect(original_image, min_score, max_overlap, top_k, suppress=None):
 
     # Detect objects in SSD output
     det_boxes, det_labels, det_scores = model.detect_objects(predicted_locs, predicted_scores, min_score=min_score,
-                                                             max_overlap=max_overlap, top_k=top_k)
+                        max_overlap=max_overlap, top_k=top_k, original_image=original_image, max_OCR_overlap=max_OCR_overlap, max_OCR_ratio=max_OCR_ratio)
+
 
     # Move detections to the CPU
     det_boxes = det_boxes[0].to('cpu')
-    #print(det_boxes)
 
 
-    # Transform to original image dimensions
-    original_dims = torch.FloatTensor(
-        [original_image.width, original_image.height, original_image.width, original_image.height]).unsqueeze(0)
-    det_boxes = det_boxes * original_dims
-
-    #print(original_dims)
-    #print(det_boxes)
+    # # Transform to original image dimensions
+    # original_dims = torch.FloatTensor(
+    #     [original_image.width, original_image.height, original_image.width, original_image.height]).unsqueeze(0)
+    # det_boxes = det_boxes * original_dims
 
     # Decode class integer labels
     det_labels = [rev_label_map[l] for l in det_labels[0].to('cpu').tolist()]
@@ -76,6 +73,7 @@ def detect(original_image, min_score, max_overlap, top_k, suppress=None):
     draw = ImageDraw.Draw(annotated_image)
     font = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-DemiLight.ttc", 15)
 
+
     # Suppress specific classes, if needed
     for i in range(det_boxes.size(0)):
         if suppress is not None:
@@ -84,6 +82,10 @@ def detect(original_image, min_score, max_overlap, top_k, suppress=None):
 
         # Boxes
         box_location = det_boxes[i].tolist()
+
+        with open('test0.8.txt', 'a+') as f:
+            f.write(str(box_location)+'\n')
+
         draw.rectangle(xy=box_location, outline=label_color_map[det_labels[i]])
         draw.rectangle(xy=[l + 1. for l in box_location], outline=label_color_map[
             det_labels[i]])
@@ -107,23 +109,58 @@ def detect(original_image, min_score, max_overlap, top_k, suppress=None):
 
 
 if __name__ == '__main__':
-    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/test1/X51006556591.jpg'
+    min_score = 0.1
+    max_overlap = 0.9
+    max_OCR_overlap = 0.2
+    max_OCR_ratio = 0.5
+    top_k = 300
+
+    # img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/X00016469623.jpg'
+    # original_image = Image.open(img_path, mode='r')
+    # original_image = original_image.convert('RGB')
+    # out_image=detect(original_image, min_score=min_score, max_overlap=0.1, top_k=200)#.show()
+    # img_save_path = './test0.1.jpg'
+    # out_image.save(img_save_path)
+
+    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/X00016469623.jpg'
     original_image = Image.open(img_path, mode='r')
     original_image = original_image.convert('RGB')
-    out_image=detect(original_image, min_score=0.2, max_overlap=0.3, top_k=200)#.show()
-    img_save_path = './test_X51006556591.jpg'
+    out_image = detect(original_image, min_score=min_score, max_overlap=max_overlap, top_k=top_k, max_OCR_overlap=max_OCR_overlap, max_OCR_ratio=max_OCR_ratio)  # .show()
+    img_save_path = './test1.jpg'
     out_image.save(img_save_path)
 
-    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/test1/X51007231361.jpg'
+    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/X51007339158.jpg'
     original_image = Image.open(img_path, mode='r')
     original_image = original_image.convert('RGB')
-    out_image=detect(original_image, min_score=0.2, max_overlap=0.3, top_k=200)#.show()
-    img_save_path = './test_X51007231361.jpg'
+    out_image=detect(original_image, min_score=min_score, max_overlap=max_overlap, top_k=top_k,  max_OCR_overlap=max_OCR_overlap, max_OCR_ratio=max_OCR_ratio)#.show()
+    img_save_path = './test2.jpg'
     out_image.save(img_save_path)
 
-    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/test1/X51008145504.jpg'
+    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/X51008123446.jpg'
     original_image = Image.open(img_path, mode='r')
     original_image = original_image.convert('RGB')
-    out_image=detect(original_image, min_score=0.2, max_overlap=0.3, top_k=200)#.show()
-    img_save_path = './test_X51008145504.jpg'
+    out_image=detect(original_image, min_score=min_score, max_overlap=max_overlap, top_k=top_k,  max_OCR_overlap=max_OCR_overlap, max_OCR_ratio=max_OCR_ratio)#.show()
+    img_save_path = './test3.jpg'
+    out_image.save(img_save_path)
+
+    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/X00016469612.jpg'
+    original_image = Image.open(img_path, mode='r')
+    original_image = original_image.convert('RGB')
+    out_image=detect(original_image, min_score=min_score, max_overlap=max_overlap, top_k=top_k, max_OCR_overlap=max_OCR_overlap, max_OCR_ratio=max_OCR_ratio)#.show()
+    img_save_path = './train1.jpg'
+    out_image.save(img_save_path)
+
+    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/X51005433538.jpg'
+    original_image = Image.open(img_path, mode='r')
+    original_image = original_image.convert('RGB')
+    out_image=detect(original_image, min_score=min_score, max_overlap=max_overlap, top_k=top_k,  max_OCR_overlap=max_OCR_overlap, max_OCR_ratio=max_OCR_ratio)#.show()
+    img_save_path = './train2.jpg'
+    out_image.save(img_save_path)
+
+    img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/X51005200938.jpg'
+
+    original_image = Image.open(img_path, mode='r')
+    original_image = original_image.convert('RGB')
+    out_image=detect(original_image, min_score=min_score, max_overlap=max_overlap, top_k=top_k, max_OCR_overlap=max_OCR_overlap, max_OCR_ratio=max_OCR_ratio)#.show()
+    img_save_path = './train3.jpg'
     out_image.save(img_save_path)

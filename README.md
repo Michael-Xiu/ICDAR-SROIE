@@ -30,7 +30,7 @@ There are several tricks with SSD in OCR:
 
 Since the scanned receipts have varied resolutions and SSD requires a limited input size *300*300*, we find the ROI with each receipt to help focus on the content.
 
-<div align=center><img src="./img/ROI.PNG" /></div>
+<div align=center><img src="./img/ROI.PNG" width="625" height="380"/></div>
 
 
 

@@ -9,8 +9,10 @@ This code is based on [SSD PyTorch tutorial](https://github.com/sgrvinod/a-PyTor
 Download the ICDAR-SROIE dataset:
 - [2019 _ICDAR-SROIE_](https://pan.baidu.com/s/1a57eKCSq8SV8Njz8-jO4Ww#list/path=%2FSROIE2019&parentPath=%2F) (542MB)
 
-### Our model
+## Our model
 - **Task 1 - Scanned Receipt Text Localisation**
+
+<div align=center><img src="./img/SSD300.png" width="600" height="181"/></div>
 
 We use *SSD300* as our backbone. Since in OCR task, there is only one label class \[*text*\], we classify our boxes into two classes \[*background*, *text*\]. We split our training set into a training set and a testing set. 
 
@@ -28,7 +30,7 @@ There are several tricks with SSD in OCR:
 
 **1. Tackle the scale variation with ROI finding**. 
 
-Since the scanned receipts have varied resolutions and SSD requires a limited input size *300*300*, we find the ROI with each receipt to help focus on the content.
+Since the scanned receipts have varied resolutions and SSD requires a limited input size *300\*300*, we find the ROI of each receipt to help focus on the content.
 
 <div align=center><img src="./img/ROI.PNG" width="625" height="380"/></div>
 
@@ -36,7 +38,7 @@ Since the scanned receipts have varied resolutions and SSD requires a limited in
 
 **2. Improve the Non-Maximum Suppression**. 
 
-With only traditional NMS (NMS 1), if we want to have an accurate but clean result, we have only two hyper parameters [*min score*, *max_overlap*] to enhance performance. If we set *min score* higher, then many correct boxes will be suppressed because the confidence of correct classification is not so high expecially for testing images. If we set *min score* lower, then lots of empty boxes will come in and they are stubborn. As for *max overlap*, we tend to lower it for clear segementation. However, it omits our goal that we want to pretain longer boxes instead of shorter ones. It is possible that the box containing only a part of the words group, having higher confidence, will suppress the longer boxes with lower confidence. 
+With only the traditional NMS (NMS 1), if we want to have an accurate but clean result, we have only two hyperparameters [*min score*, *max_overlap*] to enhance performance. If we set *min score* higher, then many correct boxes will be suppressed because the confidence of correct classification is not so high expecially for testing images. If we set *min score* lower, then lots of empty boxes will come in and they are stubborn. As for *max overlap*, we tend to lower it for clear segementation. However, it omits our goal that we want to pretain longer boxes instead of shorter ones. It is possible that the box containing only a part of the words group, having higher confidence, will suppress the longer boxes with lower confidence. 
 
 In this case, we add two more NMS based on our statistic: For a specific words group, longer boxes with more words have higher sum of pixel values then shorter boxes with less words. Compared with boxes with content, boxes without content have higher pixel value average since the background is white.
 

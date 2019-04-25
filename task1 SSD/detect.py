@@ -112,7 +112,7 @@ if __name__ == '__main__':
     min_score = 0.1
     max_overlap = 0.9
     max_OCR_overlap = 0.2
-    max_OCR_ratio = 0.5
+    max_OCR_ratio = 1
     top_k = 300
 
     # img_path = '../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/X00016469623.jpg'

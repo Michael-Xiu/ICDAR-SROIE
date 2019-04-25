@@ -10,7 +10,7 @@ import cv2
 import os
 import shutil
 
-image_path = "../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)/"
+image_path = "../ICDAR_Dataset/0325updated.task1train(626p)/0325updated.task1train(626p)(ori)/"
 box_path = image_path + 'box/'
 
 # gain the image list
@@ -58,6 +58,7 @@ def draw():
 
         # read each coordinate and draw box
         f_txt = open(image_path + name.strip('.jpg') + '.txt')
+        #line_txt = f_txt.readline()  # pass the first ROI information
         line_txt = f_txt.readline()
         while line_txt:
             coor = line_txt.split(',')
@@ -66,10 +67,11 @@ def draw():
             x3 = int(coor[4].strip('\''))
             y3 = int(coor[5].strip('\''))
             text = coor[8].strip('\n').strip('\'')
+            text_show = text + '(' + str(x1) + ',' + str(y1) +')'
 
             cv2.rectangle(img, (x1, y1), (x3, y3), (255, 0, 0), 1)
-            cv2.putText(img, text, (x1, y1 - 1),
-                        cv2.FONT_HERSHEY_TRIPLEX, 0.35, (0, 0, 255), 1)
+            #cv2.putText(img, text_show, (x1, y1 - 1),
+              #          cv2.FONT_HERSHEY_TRIPLEX, 0.35, (0, 0, 255), 1)
             line_txt = f_txt.readline()
         cv2.imwrite(box_path + name, img)
         line = f.readline()

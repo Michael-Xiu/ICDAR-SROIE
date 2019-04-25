@@ -19,7 +19,7 @@ We use *SSD300* as our backbone. Since in OCR task, there is only one label clas
 
 
 
-Run [`boxing.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/boxing.py) and we can see the goal of this task
+Run [`boxing.py`] and we can see the goal of this task
 
 <div align=center><img src="./img/boxing.PNG" width="450" height="436"/></div>
 
@@ -63,20 +63,20 @@ In this case, we add two more NMS based on our statistic: For a specific words g
 ## Prepare Data for training
 
 ### Train/Test Data Split 
-Open [`split_train_test.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/split_train_test.py) and set **train_test_ratio**. In this case it is set to 4.
+Open [`split_train_test.py`] and set **train_test_ratio**. In this case it is set to 4.
 
 In `.\ICDAR_Dataset` two files `train1` and `test1` are created. Images and labels are split into these two files in sequence.
 
 ### Pack Data
-Run [`create_data_lists.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/create_data_lists.py) in order to pack all the image paths, objects and labels into json files for futher operations. These json files are named `TEST_images.json` `TEST_objects.json` `label_map.json` `TRAIN_images.json` `TRAIN_objects.json`.
+Run [`create_data_lists.py`] in order to pack all the image paths, objects and labels into json files for futher operations. These json files are named `TEST_images.json` `TEST_objects.json` `label_map.json` `TRAIN_images.json` `TRAIN_objects.json`.
 
 <div align=center><img src="./img/json_list.PNG" width="230" height="110"/></div>
 
 ### Train
-Run [`train.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/train.py) to train an end-to-end text detection model. In this case we use Adam as optimizer.
+Run [`train.py`] to train an end-to-end text detection model. In this case we use Adam as optimizer.
 
 ### Detect
-Run [`detect.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/detect.py) to detect an test image with pretrained model with minimum validation loss. 
+Run [`detect.py`] to detect an test image with pretrained model with minimum validation loss. 
 
 ### Eval
-Run [`eval.py`](https://github.com/Michael-Xiu/ICDAR-SROIE/blob/master/src/eval.py) to evaluate the performance of the model based on F1 scores.
+Run [`eval.py`] to evaluate the performance of the model based on F1 scores.
